@@ -1,12 +1,25 @@
 const MAIN = [];
 let selectedBatch = null;
+let loading = false;
 
 async function loadDataFiles() {
+    if (loading) return;
+
+    loading = true;
+
     for (let i = 1; i <= 100; i++) {
-        if (!await loadDataFile(i)) break;
+        const loaded = await loadDataFile(i);
+
+        if (!loaded) break;
+
+        renderSelector();
     }
 
-    render();
+    loading = false;
+
+    if (MAIN.length && selectedBatch === null) {
+        selectBatch(0);
+    }
 }
 
 function loadDataFile(number) {
@@ -29,15 +42,20 @@ function loadDataFile(number) {
     });
 }
 
-function render() {
+function renderSelector() {
     const main = document.getElementById("main");
 
-    main.innerHTML = "";
+    let selector = document.getElementById("batch-selector");
 
-    if (!MAIN.length) return;
+    if (!selector) {
+        selector = document.createElement("div");
+        selector.id = "batch-selector";
+        selector.className = "selector";
 
-    const selector = document.createElement("div");
-    selector.className = "selector";
+        main.appendChild(selector);
+    }
+
+    selector.innerHTML = "";
 
     const title = document.createElement("div");
     title.className = "selector-title";
@@ -51,23 +69,23 @@ function render() {
 
         option.className = "guide-option";
 
-        option.innerHTML = `
-            <strong>${escapeHTML(batch.title || "Untitled")}</strong>
-            ${batch.description
-                ? `<small>${escapeHTML(batch.description)}</small>`
-                : ""}
-        `;
+        if (selectedBatch === index) {
+            option.classList.add("selected");
+        }
+
+        const strong = document.createElement("strong");
+        strong.textContent = batch.title || "Untitled";
+
+        option.appendChild(strong);
+
+        if (batch.description) {
+            const small = document.createElement("small");
+            small.textContent = batch.description;
+            option.appendChild(small);
+        }
 
         option.onclick = () => {
-            document
-                .querySelectorAll(".guide-option")
-                .forEach(el => el.classList.remove("selected"));
-
-            option.classList.add("selected");
-
-            selectedBatch = index;
-
-            renderBatch(batch);
+            selectBatch(index);
         };
 
         table.appendChild(option);
@@ -75,8 +93,14 @@ function render() {
 
     selector.appendChild(title);
     selector.appendChild(table);
+}
 
-    main.appendChild(selector);
+function selectBatch(index) {
+    selectedBatch = index;
+
+    renderSelector();
+
+    renderBatch(MAIN[index]);
 }
 
 function renderBatch(batch) {
@@ -96,19 +120,25 @@ function renderBatch(batch) {
     const title = document.createElement("div");
     title.className = "batch-title";
 
-    title.innerHTML = `
-        <h2>${escapeHTML(batch.title || "Untitled")}</h2>
-        ${batch.description
-            ? `<p>${escapeHTML(batch.description)}</p>`
-            : ""}
-    `;
+    const heading = document.createElement("h2");
+    heading.textContent = batch.title || "Untitled";
+
+    title.appendChild(heading);
+
+    if (batch.description) {
+        const description = document.createElement("p");
+        description.textContent = batch.description;
+        title.appendChild(description);
+    }
 
     container.appendChild(title);
 
     const samples = document.createElement("div");
     samples.className = "samples";
 
-    (batch.items || []).forEach(item => {
+    const items = batch.items || [];
+
+    items.forEach(item => {
         samples.appendChild(createSample(item));
     });
 
@@ -122,12 +152,16 @@ function createSample(item) {
     const header = document.createElement("div");
     header.className = "sample-header";
 
-    header.innerHTML = `
-        <strong>${escapeHTML(item.title || "Sample")}</strong>
-        ${item.description
-            ? `<p>${escapeHTML(item.description)}</p>`
-            : ""}
-    `;
+    const title = document.createElement("strong");
+    title.textContent = item.title || "Sample";
+
+    header.appendChild(title);
+
+    if (item.description) {
+        const description = document.createElement("p");
+        description.textContent = item.description;
+        header.appendChild(description);
+    }
 
     const previewLabel = document.createElement("div");
     previewLabel.className = "section-label";
@@ -140,11 +174,6 @@ function createSample(item) {
 
     iframe.className = "rendered-frame";
     iframe.setAttribute("sandbox", "allow-same-origin");
-
-    iframe.srcdoc = createDocument(
-        item.html || "",
-        item.css || ""
-    );
 
     preview.appendChild(iframe);
 
@@ -179,6 +208,11 @@ function createSample(item) {
 
     const originalHTML = item.html || "";
     const originalCSS = item.css || "";
+
+    iframe.srcdoc = createDocument(
+        originalHTML,
+        originalCSS
+    );
 
     editButton.onclick = () => {
         if (htmlBox.code.readOnly) {
@@ -258,8 +292,8 @@ function createCodeBox(title, value) {
     box.appendChild(code);
 
     return {
-        box: box,
-        code: code
+        box,
+        code
     };
 }
 
@@ -282,15 +316,6 @@ ${css}
 ${html}
 </body>
 </html>`;
-}
-
-function escapeHTML(value) {
-    return String(value)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 }
 
 loadDataFiles();
