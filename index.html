@@ -9,9 +9,24 @@
 <body>
     <header class="header">
         <h1>HTML Design Guide</h1>
-        <p>Select in the table to see what samples you wanted!</p>
     </header>
+
     <main id="main"></main>
+
+    <div id="full-view-modal" class="full-view-modal">
+        <div class="full-view-header">
+            <div class="full-view-tabs">
+                <button data-view="render">Render</button>
+                <button data-view="html">HTML</button>
+                <button data-view="css">CSS</button>
+            </div>
+
+            <button class="full-view-close">X</button>
+        </div>
+
+        <div class="full-view-content"></div>
+    </div>
+
     <script src="main.js"></script>
 </body>
 </html>
